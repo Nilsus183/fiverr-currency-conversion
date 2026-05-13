@@ -241,6 +241,15 @@ function App() {
         ) : null}
       </div>
 
+      <a
+        className="fixed bottom-4 right-4 z-20 rounded-lg border border-[#cdd8d2] bg-white/90 px-3 py-2 text-xs font-bold text-neutral-600 shadow-lg shadow-emerald-950/10 backdrop-blur transition hover:border-[#17231e] hover:text-[#17231e] focus:outline-none focus:ring-4 focus:ring-[#1DBF72]/20 dark:border-white/15 dark:bg-neutral-800/90 dark:text-neutral-300 dark:shadow-black/30 dark:hover:border-neutral-400 dark:hover:text-white"
+        href="https://nilsstolle.de"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        nilsstolle.de
+      </a>
+
       <section className="w-full max-w-110 rounded-lg border border-[#18221e]/10 bg-white/95 p-6 shadow-2xl shadow-emerald-950/15 transition-colors max-[420px]:p-4.5 dark:border-white/10 dark:bg-neutral-800/95 dark:shadow-black/35">
         <div className="mb-5.5 flex items-center gap-2.5 text-[15px] font-bold text-[#42514a] dark:text-neutral-300">
           <div
