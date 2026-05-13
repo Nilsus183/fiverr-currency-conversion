@@ -92,6 +92,19 @@ function htmlForLocale(locale) {
     <meta name="theme-color" content="#1dbf73" />
     <link rel="canonical" href="${url}" />
     ${alternateLinks()}
+    <script>
+      let theme = null;
+      try {
+        theme = localStorage.getItem("theme");
+      } catch {}
+      const prefersDark = matchMedia("(prefers-color-scheme: dark)").matches;
+      if (theme === "dark" || (!theme && prefersDark)) {
+        document.documentElement.classList.add("dark");
+        document.documentElement.style.colorScheme = "dark";
+      } else {
+        document.documentElement.style.colorScheme = "light";
+      }
+    </script>
 
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="${locale.htmlLang.replace("-", "_")}" />

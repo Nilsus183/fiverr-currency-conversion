@@ -28,19 +28,56 @@ function formatTemplate(template, values) {
   );
 }
 
+function getSystemTheme() {
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+function getInitialThemePreference() {
+  try {
+    const storedTheme = window.localStorage.getItem("theme");
+    return storedTheme === "dark" || storedTheme === "light" ? storedTheme : "system";
+  } catch {
+    return "system";
+  }
+}
+
 function App() {
   const localeCode = getLocaleFromPath(window.location.pathname);
   const locale = locales[localeCode];
   const [amount, setAmount] = useState("100");
   const [direction, setDirection] = useState("usdToEur");
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const [themePreference, setThemePreference] = useState(getInitialThemePreference);
+  const [systemTheme, setSystemTheme] = useState(getSystemTheme);
   const languageMenuRef = useRef(null);
+  const activeTheme = themePreference === "system" ? systemTheme : themePreference;
 
   useEffect(() => {
     document.documentElement.lang = locale.htmlLang;
     document.documentElement.dir = locale.dir;
     document.title = locale.title;
   }, [locale]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+    function handleSystemThemeChange(event) {
+      setSystemTheme(event.matches ? "dark" : "light");
+    }
+
+    mediaQuery.addEventListener("change", handleSystemThemeChange);
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleSystemThemeChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", activeTheme === "dark");
+    document.documentElement.style.colorScheme = activeTheme;
+  }, [activeTheme]);
 
   useEffect(() => {
     function handlePointerDown(event) {
@@ -129,11 +166,32 @@ function App() {
     window.location.href = `/${nextLocaleCode}/`;
   }
 
+  function handleThemeToggle() {
+    const nextTheme = activeTheme === "dark" ? "light" : "dark";
+    try {
+      window.localStorage.setItem("theme", nextTheme);
+    } catch {
+      // Keep the in-memory preference if storage is unavailable.
+    }
+    setThemePreference(nextTheme);
+    setIsLanguageOpen(false);
+  }
+
   return (
-    <main className="grid min-h-screen min-w-80 place-items-center bg-linear-to-br from-emerald-50 via-slate-50 to-teal-100 px-4 py-8 font-sans text-[#18221e]">
-      <div className="fixed right-4 top-4 z-30" ref={languageMenuRef}>
+    <main className="grid min-h-screen min-w-80 place-items-center bg-linear-to-br from-emerald-50 via-slate-50 to-teal-100 px-4 py-8 font-sans text-[#18221e] transition-colors dark:from-neutral-900 dark:via-neutral-800 dark:to-neutral-900 dark:text-neutral-100">
+      <div className="fixed right-4 top-4 z-30 flex items-start gap-2" ref={languageMenuRef}>
         <button
-          className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#cdd8d2] bg-white/95 px-3.5 text-sm font-extrabold uppercase text-[#0d6e45] shadow-lg shadow-emerald-950/10 backdrop-blur transition hover:border-[#1dbf73] hover:text-[#17231e] focus:outline-none focus:ring-4 focus:ring-[#1dbf73]/20"
+          className="inline-grid size-10 cursor-pointer place-items-center rounded-lg border border-[#cdd8d2] bg-white/95 text-lg font-extrabold text-neutral-600 shadow-lg shadow-emerald-950/10 backdrop-blur transition hover:border-[#17231e] hover:text-[#17231e] focus:outline-none focus:ring-4 focus:ring-[#1DBF72]/20 dark:border-white/15 dark:bg-neutral-800/95 dark:text-neutral-300 dark:shadow-black/30 dark:hover:border-neutral-400 dark:hover:text-white"
+          type="button"
+          aria-label="Toggle dark mode"
+          aria-pressed={activeTheme === "dark"}
+          onClick={handleThemeToggle}
+        >
+          <span aria-hidden="true">{activeTheme === "dark" ? "☀" : "☾"}</span>
+        </button>
+
+        <button
+          className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-[#cdd8d2] bg-white/95 px-3.5 text-sm font-extrabold uppercase text-neutral-600 shadow-lg shadow-emerald-950/10 backdrop-blur transition hover:border-[#17231e] hover:text-[#17231e] focus:outline-none focus:ring-4 focus:ring-[#1DBF72]/20 dark:border-white/15 dark:bg-neutral-800/95 dark:text-neutral-300 dark:shadow-black/30 dark:hover:border-neutral-400 dark:hover:text-white"
           type="button"
           aria-haspopup="listbox"
           aria-expanded={isLanguageOpen}
@@ -151,7 +209,7 @@ function App() {
 
         {isLanguageOpen ? (
           <div
-            className="absolute right-0 top-12 z-40 max-h-[min(28rem,calc(100vh-5rem))] w-56 overflow-y-auto rounded-lg border border-[#d8e1dc] bg-white p-1.5 shadow-2xl shadow-emerald-950/15"
+            className="absolute right-0 top-12 z-40 max-h-[min(28rem,calc(100vh-5rem))] w-56 overflow-y-auto rounded-lg border border-[#d8e1dc] bg-white p-1.5 shadow-2xl shadow-emerald-950/15 dark:border-white/15 dark:bg-neutral-800 dark:shadow-black/35"
             role="listbox"
             aria-label={locale.language}
           >
@@ -161,10 +219,10 @@ function App() {
 
               return (
                 <button
-                  className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold transition ${
+                  className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm font-semibold transition ${
                     isActive
-                      ? "bg-[#e8f7f0] text-[#0d6e45]"
-                      : "text-[#42514a] hover:bg-[#f3f7f5] hover:text-[#17231e]"
+                          ? "bg-[#e8f7f0] text-[#1DBF72] dark:bg-neutral-700 dark:text-neutral-100"
+                          : "text-[#42514a] hover:bg-[#f3f7f5] hover:text-[#17231e] dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-100"
                   }`}
                   key={code}
                   type="button"
@@ -173,7 +231,7 @@ function App() {
                   onClick={() => handleLocaleChange(code)}
                 >
                   <span>{option.name}</span>
-                  <span className="text-xs font-extrabold uppercase text-[#789087]">
+                  <span className="text-xs font-extrabold uppercase text-[#789087] dark:text-neutral-500">
                     {code}
                   </span>
                 </button>
@@ -183,10 +241,10 @@ function App() {
         ) : null}
       </div>
 
-      <section className="w-full max-w-110 rounded-lg border border-[#18221e]/10 bg-white/95 p-6 shadow-2xl shadow-emerald-950/15 max-[420px]:p-4.5">
-        <div className="mb-5.5 flex items-center gap-2.5 text-[15px] font-bold text-[#42514a]">
+      <section className="w-full max-w-110 rounded-lg border border-[#18221e]/10 bg-white/95 p-6 shadow-2xl shadow-emerald-950/15 transition-colors max-[420px]:p-4.5 dark:border-white/10 dark:bg-neutral-800/95 dark:shadow-black/35">
+        <div className="mb-5.5 flex items-center gap-2.5 text-[15px] font-bold text-[#42514a] dark:text-neutral-300">
           <div
-            className="flex min-w-0 items-center gap-2.5 text-[15px] font-bold text-[#42514a]"
+            className="flex min-w-0 items-center gap-2.5 text-[15px] font-bold text-[#42514a] dark:text-neutral-300"
             aria-label={locale.appName}
           >
             <img
@@ -194,21 +252,21 @@ function App() {
               src={fiverrLogo}
               alt="Fiverr"
             />
-            <h1 className="m-0 truncate text-[15px] font-bold text-[#42514a]">
+            <h1 className="m-0 truncate text-[15px] font-bold text-[#42514a] dark:text-neutral-100">
               {locale.appName}
             </h1>
           </div>
         </div>
 
         <div
-          className="mb-4.5 grid grid-cols-2 gap-1 rounded-lg border border-[#cdd8d2] bg-[#edf3f0] p-1"
+          className="mb-4.5 grid grid-cols-2 gap-1 rounded-lg border border-[#cdd8d2] bg-[#edf3f0] p-1 dark:border-white/10 dark:bg-neutral-700"
           aria-label={locale.directionLabel}
         >
           <button
-            className={`min-h-10 rounded-md text-sm font-extrabold transition ${
+            className={`min-h-10 cursor-pointer rounded-md text-sm font-extrabold transition ${
               isUsdToEur
-                ? "bg-white text-[#0d6e45] shadow-sm shadow-[#18221e]/15"
-                : "text-[#516059] hover:text-[#17231e]"
+                ? "bg-white text-[#1DBF72] shadow-sm shadow-[#18221e]/15 dark:bg-neutral-600 dark:shadow-black/20"
+                : "text-[#516059] hover:text-[#17231e] dark:text-neutral-400 dark:hover:text-neutral-100"
             }`}
             type="button"
             onClick={() => handleDirectionChange("usdToEur")}
@@ -216,10 +274,10 @@ function App() {
             {locale.usdToEur}
           </button>
           <button
-            className={`min-h-10 rounded-md text-sm font-extrabold transition ${
+            className={`min-h-10 cursor-pointer rounded-md text-sm font-extrabold transition ${
               !isUsdToEur
-                ? "bg-white text-[#0d6e45] shadow-sm shadow-[#18221e]/15"
-                : "text-[#516059] hover:text-[#17231e]"
+                ? "bg-white text-[#1DBF72] shadow-sm shadow-[#18221e]/15 dark:bg-neutral-600  dark:shadow-black/20"
+                : "text-[#516059] hover:text-[#17231e] dark:text-neutral-400 dark:hover:text-neutral-100"
             }`}
             type="button"
             onClick={() => handleDirectionChange("eurToUsd")}
@@ -228,10 +286,10 @@ function App() {
           </button>
         </div>
 
-        <div className="rounded-lg border border-[#1dbf73]/25 bg-[#f7fbf9] p-5">
-          <p className="m-0 text-sm font-semibold text-[#5f6d66]">{resultLabel}</p>
+        <div className="rounded-lg border border-[#1DBF72]/25 bg-[#f7fbf9] p-5 dark:border-neutral-600/30 dark:bg-neutral-700">
+          <p className="m-0 text-sm font-semibold text-[#5f6d66] dark:text-neutral-400">{resultLabel}</p>
           <output
-            className="mt-2 block text-[clamp(34px,8vw,48px)] font-extrabold leading-none text-[#17231e]"
+            className="mt-2 block text-[clamp(34px,8vw,48px)] font-extrabold leading-none text-[#17231e] dark:text-neutral-100"
             aria-live="polite"
           >
             {formatMoney(converted)} {outputCurrency}
@@ -239,13 +297,13 @@ function App() {
         </div>
 
         <label className="mt-5.5 grid gap-2" htmlFor="amount">
-          <span className="text-sm font-semibold text-[#5f6d66]">
+          <span className="text-sm font-semibold text-[#5f6d66] dark:text-neutral-400">
             {formatTemplate(locale.amountLabel, { currency: inputCurrency })}
           </span>
-          <div className="grid min-h-14 grid-cols-[auto_1fr] items-center gap-2.5 rounded-lg border border-[#bac6c0] bg-white px-3.5 focus-within:border-[#1dbf73] focus-within:shadow-[0_0_0_4px_rgba(29,191,115,0.15)]">
-            <span className="text-xl text-[#1f7d53]">{inputSymbol}</span>
+          <div className="grid min-h-14 grid-cols-[auto_1fr] items-center gap-2.5 rounded-lg border border-[#bac6c0] bg-white px-3.5 focus-within:border-[#1DBF72] focus-within:shadow-[0_0_0_4px_rgba(29,191,115,0.15)] dark:border-white/15 dark:bg-neutral-700 dark:focus-within:border-neutral-400">
+            <span className="text-xl text-[#1DBF72]">{inputSymbol}</span>
             <input
-              className="w-full min-w-0 border-0 bg-transparent text-2xl font-bold text-[#17231e] outline-none"
+              className="w-full min-w-0 cursor-text border-0 bg-transparent text-2xl font-bold text-[#17231e] outline-none dark:text-neutral-100"
               id="amount"
               inputMode="decimal"
               min="0"
@@ -258,28 +316,28 @@ function App() {
         </label>
 
         <div className="mt-4.5 grid grid-cols-2 gap-3 max-[420px]:grid-cols-1">
-          <article className="grid min-w-0 gap-1.5 rounded-lg border border-[#18221e]/10 bg-white p-3.5">
-            <span className="text-sm font-semibold text-[#5f6d66]">
+          <article className="grid min-w-0 gap-1.5 rounded-lg border border-[#18221e]/10 bg-white p-3.5 dark:border-white/10 dark:bg-neutral-700">
+            <span className="text-sm font-semibold text-[#5f6d66] dark:text-neutral-400">
               {locale.sellerGets}
             </span>
-            <strong className="text-2xl leading-tight text-[#17231e]">
+            <strong className="text-2xl leading-tight text-[#17231e] dark:text-neutral-100">
               {formatMoney(calculation?.sellerEur ?? null)} EUR
             </strong>
-            <small className="text-xs leading-normal text-[#607169]">
+            <small className="text-xs leading-normal text-[#607169] dark:text-neutral-500">
               {formatTemplate(locale.sellerFeeNote, {
                 amount: formatMoney(calculation?.sellerUsd ?? null),
               })}
             </small>
           </article>
 
-          <article className="grid min-w-0 gap-1.5 rounded-lg border border-[#18221e]/10 bg-white p-3.5">
-            <span className="text-sm font-semibold text-[#5f6d66]">
+          <article className="grid min-w-0 gap-1.5 rounded-lg border border-[#18221e]/10 bg-white p-3.5 dark:border-white/10 dark:bg-neutral-700">
+            <span className="text-sm font-semibold text-[#5f6d66] dark:text-neutral-400">
               {locale.buyerPays}
             </span>
-            <strong className="text-2xl leading-tight text-[#17231e]">
+            <strong className="text-2xl leading-tight text-[#17231e] dark:text-neutral-100">
               {formatMoney(calculation?.buyerUsd ?? null)} USD
             </strong>
-            <small className="text-xs leading-normal text-[#607169]">
+            <small className="text-xs leading-normal text-[#607169] dark:text-neutral-500">
               {formatTemplate(locale.buyerFeeNote, {
                 amount: formatMoney(calculation?.buyerEur ?? null),
                 fixedFee: calculation?.buyerFixedFee ? locale.fixedFee : "",
@@ -288,21 +346,21 @@ function App() {
           </article>
         </div>
 
-        <div className="mt-4.5 grid gap-2.5 border-t border-[#18221e]/10 pt-4.5">
+        <div className="mt-4.5 grid gap-2.5 border-t border-[#18221e]/10 pt-4.5 dark:border-white/10">
           <div className="flex justify-between gap-4 max-[420px]:flex-col max-[420px]:items-start max-[420px]:gap-1.5">
-            <span className="text-sm font-semibold text-[#5f6d66]">
+            <span className="text-sm font-semibold text-[#5f6d66] dark:text-neutral-400">
               {locale.fiverrPrice}
             </span>
-            <strong className="text-right text-sm text-[#17231e] max-[420px]:text-left">
+            <strong className="text-right text-sm text-[#17231e] max-[420px]:text-left dark:text-neutral-100">
               {formatMoney(calculation?.fiverrPriceUsd ?? null)} USD /{" "}
               {formatMoney(calculation?.fiverrPriceEur ?? null)} EUR
             </strong>
           </div>
           <div className="flex justify-between gap-4 max-[420px]:flex-col max-[420px]:items-start max-[420px]:gap-1.5">
-            <span className="text-sm font-semibold text-[#5f6d66]">
+            <span className="text-sm font-semibold text-[#5f6d66] dark:text-neutral-400">
               {locale.conversion}
             </span>
-            <strong className="text-right text-sm text-[#17231e] max-[420px]:text-left">
+            <strong className="text-right text-sm text-[#17231e] max-[420px]:text-left dark:text-neutral-100">
               {isUsdToEur ? "USD x 0.89281" : "EUR / 0.89281"}
             </strong>
           </div>

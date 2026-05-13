@@ -4,6 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Fiverr Währungsumrechner</title>
+    <script>
+      let theme = null;
+      try {
+        theme = localStorage.getItem("theme");
+      } catch {}
+      const prefersDark = matchMedia("(prefers-color-scheme: dark)").matches;
+      if (theme === "dark" || (!theme && prefersDark)) {
+        document.documentElement.classList.add("dark");
+        document.documentElement.style.colorScheme = "dark";
+      } else {
+        document.documentElement.style.colorScheme = "light";
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
